@@ -9,6 +9,7 @@ import os
 import Image
 
 piece_name='stomper'
+#piece_name='freezer'
 
 def create_piece_bitmaps(in_piece_name):
     #infile_pattern="in_%s%d.gif"
@@ -17,8 +18,13 @@ def create_piece_bitmaps(in_piece_name):
     infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\small_%s%d.gif"
     infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\green_small_%s%d.gif"
     infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\extracted_pieces_15x15\\1_%s%d.gif"
+    infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\data\\extracted_pieces_45x45\\1_%s%d.gif"
+    #infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\data\\extracted_pieces_45x45\\2_%s%d.gif"
+    infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\testpieces_45x45\\1_%s%d.gif"
+    infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\pieces_46x46\\1_%s%d.gif"
     
     infile=infile_pattern%(in_piece_name, 0)
+    #infile=infile_pattern%(in_piece_name, 4)
     im = Image.open(infile)
     im = im.convert() ## convert pixel/image data to RGB mode
     image0x, image0y = im.size
