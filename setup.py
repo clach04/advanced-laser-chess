@@ -44,20 +44,21 @@ import glob
 ## RE-FACTOR!!
 data_file_list = ['wz_jsgraphics.js', 'template_alc.html', 'readme.txt']
 
-pieces_18x18 = 'pieces_18x18'
-data_file_list_pieces_18x18 = glob.glob(os.path.join(pieces_18x18, '*'))
-pieces_18x18 = os.path.join(exe_dest_dir, pieces_18x18)
+data_files = []
+data_files.append((exe_dest_dir, data_file_list))
 
-pieces_46x46 = 'pieces_46x46'
-data_file_list_pieces_46x46 = glob.glob(os.path.join(pieces_46x46, '*'))
-pieces_46x46 = os.path.join(exe_dest_dir, pieces_46x46)
-
+import cherry_alc
+for temp_piecedir in cherry_alc.valid_pieces:
+    data_file_list = glob.glob(os.path.join(temp_piecedir, '*'))
+    tdir = os.path.join(exe_dest_dir, temp_piecedir)
+    temp_tuple = (tdir, data_file_list)
+    data_files.append(temp_tuple)
 
 setup(
     # The lib directory contains everything except the executables and the python dll.
     zipfile = zipfile,
     name = program_name,
-    version = "0.1",
+    version = "0.2",
     description = "Advanced Laser Chess",
     url="http://kpg.sourceforge.net/",
     author="Chris Clark",
@@ -65,11 +66,7 @@ setup(
     console = [exe_info ],
     #data_files=[(exe_dest_dir, ["kpg.xrc", icon_file, 'mycolors.txt', 'template.html', 'template.txt'])],
     #data_files=[(exe_dest_dir, data_file_list)],
-    data_files=[
-                (exe_dest_dir, data_file_list),
-                (pieces_18x18, data_file_list_pieces_18x18),
-                (pieces_46x46, data_file_list_pieces_46x46)
-                ],
+    data_files=data_files,
     options = options
     )
 

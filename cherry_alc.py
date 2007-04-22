@@ -49,8 +49,15 @@ static_dirname = 'different_dir' # use basename/dirname and have fully quailifed
 pieces_location=None
 pieces_location='pieces_18x18'
 pieces_location='pieces_46x46'
+pieces_location='PastelAmiga_pieces_45x45'
 static_dirname = pieces_location
-valid_pieces=['pieces_18x18', 'pieces_46x46']
+valid_pieces=[
+                'OriginalAmiga_pieces_15x15', 
+                'pieces_18x18', 
+                'AmigaBig_pieces_45x45', 
+                'PastelAmiga_pieces_45x45', 
+                'pieces_46x46',
+            ]
 
 form_str = '''
 <form action="test" method="GET">
