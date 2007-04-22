@@ -7,6 +7,7 @@
 # TODO transparency support (keep transparency, replace black with transparency)
 
 import os
+import sys
 
 import Image
 
@@ -33,10 +34,6 @@ alc_mapping ={
     'blank' : 'blank'
     }
 
-
-# default colour mapping
-p1top2_colours = {(255, 180, 180): (180, 255, 180), (180, 72, 72): (72, 180, 72)}
-p1tofrozen_colours = {(255, 180, 180): (180, 180, 180), (180, 72, 72): (180, 180, 180)}
 
 
 def change_colours(input_colour_map):
@@ -65,8 +62,6 @@ def change_colours(input_colour_map):
         return out_image
     return private_filter
 
-change_colours_p2 = change_colours(p1top2_colours)
-change_colours_gray = change_colours(p1tofrozen_colours)
 
 def dumb_filter_and_save(input_image, dumb_filter_func, new_filename):
     #dumb_filter_func(input_image).save(new_filename)
@@ -83,6 +78,28 @@ def create_piece_bitmaps(in_piece_name, out_piece_name, outfile_type, out_dirnam
     infile_pattern="%s%d.gif"
     infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\data\\sharpalc\\%s%d.gif"
     infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\data\\alc\\%s%d.gif"
+    
+    in_dir = os.path.dirname(infile_pattern)
+    sys.path.append(in_dir)
+    try:
+        from tile_colours import p1top2_colours, p1tofrozen_colours
+    except ImportError, info:
+        print 'unable to import colour mappings, using defaults'
+        # default colour mapping
+        p1colour = (180, 72, 72)
+        p1mirror_colour = (255, 180, 180)
+        
+        p2colour = (72, 180, 72)
+        #p2colour = (72, 72, 180)# test blue
+        p2mirror_colour = (180, 255, 180)
+        
+        frozen_colour = (180, 180, 180)
+        
+        p1top2_colours = {p1mirror_colour : p2mirror_colour, p1colour : p2colour}
+        p1tofrozen_colours = {p1mirror_colour : frozen_colour, p1colour : frozen_colour}
+    
+    change_colours_p2 = change_colours(p1top2_colours)
+    change_colours_gray = change_colours(p1tofrozen_colours)
     
     infile=infile_pattern%(in_piece_name, 0)
     im = Image.open(infile)
