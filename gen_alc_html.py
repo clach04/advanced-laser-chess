@@ -6,7 +6,7 @@ from cgi import escape as html_escape
 import alc_model
 
 """
-# TODO winner colour should be on screen (part of you can carry on playing problem partly this modeule, partly game engine?)
+# TODO clean up template render code
 # TODO losses, two styles:
             what is missing (DONE)
             ALL pieces what is still here (zero count) and missing
