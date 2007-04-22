@@ -1,0 +1,117 @@
+html2template Tutorial 1: Generating a basic links page
+(C) 2004 HAS
+
+
+This tutorial shows how to create a simple links page that'll look something like this:
+
+	--------------------
+	|  Site Map
+	|
+	|  * Home
+	|  * Products
+	|  * About
+	--------------------
+
+1. The following HTML template contains three elements (<title>, <li>, <a>) containing compiler directives (node="con:title", node="rep:item", node="con:link"):
+
+	html = """
+	<html>
+		<head>
+			<title node="con:title">TITLE</title>
+		</head>
+		<body>
+			<ul>
+				<li node="rep:item">
+					<a href="" node="con:link">LINK</a>
+				</li>
+			</ul>
+		</body>
+	</html>
+	"""
+
+html2template will compile this template to the following object model:
+
+	Template
+	    |
+	    |----title
+	    |
+	    |----item
+	    |      |
+	    |      |----link
+
+
+
+2. Compiling the template is simple. Just create a new Template instance, passing it the HTML string:
+
+	from html2template import Template
+	template = Template(html)
+
+
+
+3. Generating a finished page is a three-step process:
+
+i. Make a copy of the original Template object. This optional step allows many pages to be rendered using a single Template object instead of compiling a new Template object each time (copying is faster than recompiling).
+
+ii. Insert data into this Template object.
+
+iii. Render this Template object as HTML.
+
+
+First, declare the render() function and make a duplicate of the original Template object:
+
+	def render(pageTitle, linksInfo):
+		"""Renders the template.
+			pageTitle : string -- the page title
+			linksInfo : list of tuple -- a list of form: [(URI, name),...]
+			Result : string -- the finished HTML
+		"""
+		node = template.copy()
+
+Next, insert the page title text into the template's <title> element and generate a list of <li> elements by calling the 'rep:item' node's repeat() method (more on this later):
+
+		node.title.val = pageTitle
+		node.item.repeat(renderItem, linksInfo)
+
+Finally, call the Template's render() method to return the finished HTML:
+
+		return node.render()
+
+
+4. To control rendering of the 'rep:item' Repeater node, a second callback function, renderItem(), must be defined. This callback is passed to the 'rep:item' node's repeat() method, along with a list of values for it to iterate over, and is responsible for setting the 'href' attribute and content of the 'rep:item' node's <a> element, represented as the Container node 'con:link':
+
+	def renderItem(item, linkInfo):
+		"""Callback function used by render().
+			node : Repeater -- the copy of the rep:item node to manipulate
+			linkInfo : tuple of string -- a tuple of form: (URI, name)
+		"""
+		URI, name = linkInfo
+		node.link.atts['href'] = URI
+		node.link.val = name
+
+
+5. To render a page, call the main render() function, passing it the data to be inserted into the template:
+
+	title = "Site Map"
+	links = [('index.html', 'Home'), ('products/index.html', 'Products'), ('about.html', 'About')]
+	print render(title, links)
+
+Here's the result:
+
+	<html>
+		<head>
+			<title>Site Map</title>
+		</head>
+		<body>
+			<ul>
+				<li>
+					<a href="index.html">Home</a>
+				</li>
+	<li>
+					<a href="products/index.html">Products</a>
+				</li>
+	<li>
+					<a href="about.html">About</a>
+				</li>
+			</ul>
+		</body>
+	</html>

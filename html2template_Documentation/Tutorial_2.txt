@@ -1,0 +1,87 @@
+HTMLTemplate Tutorial 2: Grouping nodes as a single repeatable block
+(C) 2004 HAS
+
+
+When designing an HTML template, you'll sometimes need to insert additional HTML elements (typically <div> and <span>) to allow you to define template nodes in the proper locations. For example, to generate a page like:
+
+	<h2>title 1</h2>
+	<p>description 1</p>
+
+	<h2>title 2</h2>
+	<p>description 2</p>
+
+	<h2>title 3</h2>
+	<p>description 3</p>
+
+you need to repeat the <h2> and <p> elements as a single block. A common mistake for beginners is to write:
+
+	<h2 node="rep:title">section title</h2>
+	<p node="rep:desc">section description</p>
+
+but this template generates the following output, which is not what you want:
+
+	<h2>title 1</h2>
+	<h2>title 2</h2>
+	<h2>title 3</h2>
+	<p>description 1</p>
+	<p>description 2</p>
+	<p>description 3</p>
+
+The solution is to group the <h2> and <p> elements within a single Repeater node and repeat that. To do this:
+
+1. Wrap the <h2> and <p> elements in a <div> element:
+
+	<div>
+		<h2>section title</h2>
+		<p>section description</p>
+	</div>
+
+and mark this <div> as a Repeater object:
+
+	<div node="rep:section">
+		<h2>section title</h2>
+		<p>section description</p>
+	</div>
+
+2. Mark the <h2> and <p> elements as Containers:
+
+	<div node="rep:section">
+		<h2 node="con:title">section title</h2>
+		<p node="con:desc">section description</p>
+	</div>
+
+When rendered, this template will generate the following:
+
+	<div>
+		<h2>title 1</h2>
+		<p>description 1</p>
+	</div>
+	<div>
+		<h2>title 2</h2>
+		<p>description 2</p>
+	</div>
+	<div>
+		<h2>title 3</h2>
+		<p>description 3</p>
+	<div>
+
+3. Finally, if the <div> tags serve no useful purpose in the finished page then you can omit them using the 'minus tags' modifer:
+
+	<div node="-rep:section">
+		<h2 node="con:title">section title</h2>
+		<p node="con:desc">section description</p>
+	</div>
+
+Here's how the finished page will typically look:
+
+	
+		<h2>title 1</h2>
+		<p>description 1</p>
+	
+
+		<h2>title 2</h2>
+		<p>description 2</p>
+	
+
+		<h2>title 3</h2>
+		<p>description 3</p>

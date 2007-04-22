@@ -1,0 +1,322 @@
+html2template
+0.1.0
+
+----------------------------------------------------------------------
+SUMMARY
+
+A fast, powerful, easy-to-use HTML templating system.
+
+----------------------------------------------------------------------
+DESCRIPTION
+
+html2template converts HTML/XHTML templates into simple Python object models that can be directly manipulated by your scripts.
+
+
+======= About HTML Templates =======
+
+An HTML template is usually a complete HTML/XHTML document, though it may also be a fragment of one - html2template doesn't require the document be complete, nor even that it has a single root element.
+
+To create a Template object model, selected HTML elements must be annotated with 'compiler directives', special tag attributes that indicate how the object model is to be constructed. Here are some examples:
+
+	<h1 node="con:title">Welcome</h1>
+
+	<img node="con:photo" src="" />
+
+	<a node="rep:navlink" href="#">Catalogue</a>
+
+	<span node="-sep:navlink"> | </span>
+
+	<div node="del:"> ... </div>
+
+
+One restriction does apply when authoring templates: the template's HTML elements must be correctly closed according to XHTML rules. For example, this markup is acceptable:
+
+	<p>Hello World</p>
+
+	<hr />
+
+but this is not:
+
+	<p>Hello World
+
+	<hr>
+
+
+======= Compiler Directives =======
+
+html2template defines four types of compiler directive:
+
+- 'con' defines a Container node that can appear only once at the given location
+- 'rep' defines a Repeater node that can appear any number of times
+- 'sep' defines a separator string to be inserted between each iteration of a Repeater object of the same name
+- 'del' indicates a section of markup to be omitted in the compiled template.
+
+The special attribute name can be anything (the default is 'node' but any other name may be specified via the Template constructor), and its values are typically of form "FOO:BAR", where FOO is a three-letter code indicating the type of directive and BAR is the name of the node to create. Every node name must be a valid Python identifier with two additional restrictions: 1. it cannot begin with an underscore, and 2. it cannot match the name of any method or property belonging to the Container, Repeater and Template classes. (Note: the 'del' directive doesn't create a named node, so may simply be written as "del:") Directive types and node names are both case-sensitive.
+
+html2template also supports a single directive modifier, '-', also known as the 'minus tags' modifier. When prepended to a directive, e.g. "-con:foo", the minus tags modifier indicates that the HTML element's tags should be omitted in the compiled node/separator string. Use this modifier when adding an arbitrary HTML element (typically <div> or <span>) to an HTML template purely to construct a node or separator string to prevent the rendered page being cluttered with the leftover tags.
+
+
+======= The Template Object Model =======
+
+The html2template object model is basically a highly simplified, specialised variation on the traditional DOM, in which certain HTML elements can be manipulated via a small, simple, purpose-designed API.
+
+The Template object model is constructed from three classes: Template, Container and Repeater.
+
+The Template object forms the template's root node, representing the complete HTML document. Contains one or more Container/Repeater child nodes. Calling its render() method generates a finished page.
+
+A Container object represents a modifiable HTML element. e.g.:
+
+	<title node="con:pagetitle">...</title>
+
+The HTML element may be empty - e.g. '<br />' - in which case it has no content and only its tag attributes are modifiable, or non-empty - e.g. '<p>...</p>' - in which case it may contain either modifiable content (plain text/markup) or other Container/Repeater nodes. The standard Container node has a one-to-one relationship with its parent node, appearing only once [1] when rendered.
+
+A Repeater node is a Container node that has a one-to-many relationship with its parent node, appearing zero or more times - once for each item [1] in the collection being iterated by its repeat() method. e.g.:
+
+	<ul>
+		<li node="rep:listitem">...</li>
+	</ul>
+
+
+The Repeater class's repeat() method is roughly analogous to Python's built-in map() function, except that it additionally passes the object to be modified as one of its arguments and doesn't return a value. For example, the call:
+
+	myRepeaterNode.repeat(callback, [1, 2, 3, 4, 5], *args)
+
+will call the given callback function five times, each time passing it a copy of myRepeaterNode and one of the items from the given list, as well as any additional arguments supplied by the user. The callback function can then manipulate the supplied Repeater object, inserting data into the HTML element's tag attributes and/or content, or modifying its child nodes, or calling its omit() method to prevent that instance of the Repeater from being rendered in the finished page.
+
+Container and Repeater methods also provide a render() method that can be used to render only that portion of the template.
+
+
+-------
+
+[1] Except when the object's omit() method is called, in which case the HTML element it represents is omitted from the finished page.
+
+
+======= Compiling a Template =======
+
+To compile a template, create a new instance of html2template.Template with the template text as its first argument:
+
+	from html2template import Template
+	template = Template(html)
+
+Two optional arguments may also be provided:
+
+- node -- The name of the tag attributes used to hold compiler directives. The default is 'node', but may be changed to any other valid attribute name; e.g. 'id', 'obj', 'foo:bar'. This can be useful if, for example, you have to edit or process your templates in an application that automatically rejects all non-valid HTML attribute names.
+
+- codecs -- Allows the default HTML entity encoding/decoding functions to be replaced. These functions are applied when getting or setting the value of a Container or Repeater node's content property. By default, only the four markup characters, <>&" are converted. This minimal level of conversion is provided for security's sake, but you may want to replace these functions with your own if you need also to escape non-ASCII or other characters as standard.
+
+
+======= Duplicating a Template =======
+
+# TO FINISH
+
+Template objects can be duplicated by calling their copy() method.
+
+When rendering multiple pages from a single HTML template, it's more efficient to compile the template once and copy that original to create new Template objects than to compile a new Template object from scratch each time:
+
+	_templatePrototype = html2template.Template(html)
+
+	def renderPage(...):
+		template = _templatePrototype.copy()
+		[Insert data into template here]
+		return template.render()
+
+
+======= Adding Content to a Template =======
+
+# TO FINISH
+
+... to manipulate this object model - inserting the user-supplied data into nodes as tag attributes and content, omitting unwanted sections, even rearranging the object model itself!
+
+
+======= Rendering a Template =======
+
+# TO FINISH
+To render a Template as HTML, just call its render() method.
+
+
+----------------------------------------------------------------------
+CLASSES
+
+Node -- Abstract base class
+	Properties:
+		nodetype : string -- the node's type ('con', 'rep' or 'tem')
+
+		nodename : string -- the node's name
+
+		<NAME> : Container | Repeater -- a (child) node defined by the source HTML template (<NAME> = the child node's name; a node can have zero or more child nodes)
+
+	Methods:
+		__iter__() -- returns a generator object for iterating over sub-nodes
+			Result : generator
+		
+		structure() -- render the object model structure for diagnostic use
+			Result : string
+
+		copy() -- duplicate this object
+			Result : Container | Repeater | Template
+
+		render() -- render this object as HTML
+			Result : string or unicode
+
+
+
+Attributes -- A simple dict-like structure containing an HTML tag's attributes; supports getting, setting and deleting of attributes by name, e.g. node.atts['href'] = 'foo.html'
+
+
+
+Container(Node) -- A mutable HTML element ('con')
+	Properties:
+		atts : Attributes -- the tag's attributes
+
+		val : string -- the HTML element's content with &<>" characters automatically escaped (note: when inserting raw HTML, use the raw property instead) [1]
+
+		raw : string -- the HTML element's raw content (i.e. no automatic character escaping) [1]
+
+	Methods:
+		__len__() -- returns 0 if this node is omitted, else 1
+			Result : int
+
+		omit() -- don't render this node
+
+		omittags() -- don't render this node's tags (only its content)
+
+
+
+Repeater(Container) -- A mutable, repeatable HTML element ('rep')
+	Methods:
+		__len__() -- number of repeated instances (omitted instances aren't counted)
+			Result : int
+
+		add(fn, *args) -- render an instance of this node
+			fn : function -- the function to call [2]
+			*args : anything -- any values to be passed directly to the given function
+
+		repeat(fn, sequence, *args) -- render an instance of this node for each item in sequence
+			fn : function -- the function to call for each item in list [3]
+			sequence : anything -- a list, tuple, or other iterable collection
+			*args : anything -- any values to be passed directly to the given function
+
+
+
+Template(Node) -- The top-level template node ('tem')
+	Constructor:
+		Template(html, attribute='node', codecs=(defaultEncoder, defaultDecoder))
+			html : string or unicode -- the HTML template
+			[attribute : string or unicode] -- name of the tag attribute used to hold compiler directives
+			[codecs : tuple] -- a tuple containing two functions used by the content property to encode/decode HTML entities [4]
+
+
+
+ParseError(Exception) -- A template parsing error
+
+
+-------
+
+[1] The val and raw properties can only be used when the Container/Repeater object is derived from a non-empty HTML element. If the HTML element is empty (e.g. <br />), the operation is ignored/an AttributeError occurs.
+
+[2] The callback function must accept the following arguments: 
+	node : Repeater -- a copy of the Repeater object
+	*args : anything -- zero or more additional parameters corresponding to any extra arguments passed by the user to the Repeater's add() method
+
+[3] The callback function must accept the following arguments: 
+	node : Repeater -- a copy of the Repeater object
+	item : anything -- an item from the sequence being iterated
+	*args : anything -- zero or more additional parameters corresponding to any extra arguments passed by the user to the Repeater's repeat() method
+
+[4] The default codec functions encode/decode the four standard markup characters: &<>". When supplying your own, both replacement functions should accept and return a single string/unicode value. The first function should convert specified characters into HTML entities; the second should perform the reverse operation.
+
+----------------------------------------------------------------------
+EXAMPLES
+
+Tutorials:
+
+- Tutorial_1.py
+- Tutorial_2.py
+
+
+Bundled examples:
+
+- Demo1_Quote.py
+- Demo2_Table.py
+- Demo3_Links.py
+- Demo4_SimpleCalendar.py
+- Demo5_AlternatingRowColors.py
+- Demo6_UserList.py
+- Demo7_SimpleInterpolation.py
+
+----------------------------------------------------------------------
+NOTES
+
+======= Template design tips =======
+
+- Where two or more sibling nodes share the same type and name, only the first is included in the compiled template and the rest discarded. (If two or more sibling nodes share the same name but have different types, then unless the first node is type 'rep' and the other of type 'sep' a ParseError will occur.)
+
+- The parser automatically removes the special attribute from any element it converts into a template node. Tag attributes whose name is the same as that used for special attributes but whose value isn't a recognised compiler directive are treated are left unchanged.
+
+- Separators must be declared after their corresponding Repeater nodes.
+
+- When authoring a template, you'll sometimes want to group two or more adjacent nodes so they can be repeated as a single block. If the HTML doesn't already contain a suitable parent element to add the 'rep' compiler directive to, insert an extra <div> or <span> element that wraps these nodes and add the 'rep' directive to convert it to create your Repeater node. You can the use the 'minus tags' modifier to omit this element from the rendered page. The Tutorials.txt file covers this technique in more detail.
+
+
+======= Controller design tips =======
+
+- When setting a node's content, make sure you write:
+
+	node.foo.val = val
+
+not:
+
+	node.foo = val
+
+The first assigns val as the node's content, the second replaces the node itself.
+
+
+======= Template rendering tips =======
+
+- The attributes property, atts, performs basic validation of user-supplied attribute names and values for security:
+	- An attribute's name must match the pattern '^[a-zA-Z_][-.:a-zA-Z_0-9]*$'
+	- An attribute's value may not contain both single and double quotes. 
+
+- While html2template will single/double-quote attribute values as appropriate, it won't perform any special encoding of values. Any attribute value encoding is left to the user's code, e.g. using urllib's quote() and unquote() functions.
+
+
+======= Miscellaneous notes =======
+
+- The public class structure shown in this documentation is slightly simplified from the actual (multiple inheritance-based) implementation to make it easier to understand. This is not something end users should worry about.
+
+
+======= Changes from HTMLTemplate =======
+
+- TO DO
+
+----------------------------------------------------------------------
+KNOWN ISSUES
+
+----------------------------------------------------------------------
+DEPENDENCIES
+
+- Python 2.3+
+
+----------------------------------------------------------------------
+HISTORY
+
+----------------------------------------------------------------------
+AUTHOR
+
+- HAS <hamish.sanderson@virgin.net> <http://freespace.virgin.net/hamish.sanderson/>
+
+----------------------------------------------------------------------
+CREDITS
+
+- Many thanks to Bud P Bruegger, Graham Dumpleton, Ronald van Engelen, Matthias Fiebig, Tomas Jogin, Edvard Majakari, Simon Willison and Jarek Zgoda for comments, suggestions and bug reports.
+
+----------------------------------------------------------------------
+COPYRIGHT
+
+Copyright (C) 2006 HAS
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
