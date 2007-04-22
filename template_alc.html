@@ -1,0 +1,1513 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <meta content="text/html; charset=ISO-8859-1" 
+ http-equiv="content-type">
+  <title>Advanced Laser Chess</title>
+
+<style type="text/css">
+table.alc_board {
+	border-width: 0px 0px 0px 0px;
+	border-spacing: 0px;
+	border-style: outset outset outset outset;
+	border-color: blue blue blue blue;
+	border-collapse: separate;
+	background-color: black;
+}
+table.alc_board th {
+	border-width: 1px 1px 1px 1px;
+	padding: 1px 1px 1px 1px;
+	border-style: inset inset inset inset;
+	border-color: blue blue blue blue;
+	background-color: black;
+	-moz-border-radius: 0px 0px 0px 0px;
+}
+table.alc_board td {
+	border-width: 1px 1px 1px 1px;
+	padding: 1px 1px 1px 1px;
+	border-style: inset inset inset inset;
+	border-color: blue blue blue blue;
+	background-color: black;
+	color: white;
+	-moz-border-radius: 0px 0px 0px 0px;
+}
+div.instructions{
+    display: none;
+	background-color:#eee;
+	border:1px dashed #999;
+	}
+div.game_status {
+    position:absolute;
+    top:0;
+    right:0;
+	width:180px;
+	padding:10px;
+	background-color:#eee;
+	border:1px dashed #999;
+	}
+div.game_status2 {
+    position:absolute;
+    bottom:0;
+    right:0;
+	width:180px;
+	padding:10px;
+	background-color:#eee;
+	border:1px dashed #999;
+	}
+div.player_green {
+	font-size: xx-large;
+	width:20px;
+	padding:20px;
+	border:1px dashed #999;
+	background-color:rgb(72, 180, 72);
+	}
+div.player_red {
+	font-size: xx-large;
+	width:20px;
+	padding:20px;
+	border:1px dashed #999;
+	background-color:rgb(180, 72, 72);
+	}
+body.red {
+	background-color:rgb(180, 72, 72);
+	}
+body.green {
+	background-color:rgb(72, 180, 72);
+	}
+}
+
+</style>
+
+    <!-- http://www.walterzorn.com/jsgraphics/jsgraphics_e.htm //-->
+    <script type="text/javascript" src="wz_jsgraphics.js"></script>
+    <script type="text/javascript">
+        /*
+         ** not pretty, needs reformatting runs semi/mostly clean 
+         ** through http://www.jslint.com/
+         ** blink tag is bad and needs changing (jslint stops when it hits it)
+         */
+        // idea/code from http://24ways.org/2006/writing-responsible-javascript
+            
+        function addLoadEvent(func) {
+            var oldonload = window.onload;
+            if (typeof window.onload != 'function') {
+                window.onload = func;
+            } else {
+                window.onload = function() {
+                    if (oldonload) {
+                        oldonload();
+                    }
+                    func();
+                };
+            }
+        }        
+        //function myFunc(tile_name) {
+        function myFunc_test(e) {
+            // see http://www.quirksmode.org/js/introevents.html
+            var mystr="";
+            var targ;
+            var centre_cord=[7,5];
+            if (!e) var e = window.event;
+            if (e.target) { targ = e.target; }
+            else if (e.srcElement) { targ = e.srcElement; }
+            if (targ.nodeType == 3) // defeat Safari bug
+            {
+                targ = targ.parentNode;
+            }
+            alert('myFunc!' + targ ); // targ is;t actually much use....
+            //alert('myFunc!' + targ.id ); // doesn't have name :-(
+            thing_clicked_name = this.id;
+            splitstring = thing_clicked_name.split("_");
+            mystr = "(" + splitstring[1] + ", "  + splitstring[2] + ")";
+            //the_coords = splitstring.slice(1,2);
+            the_coords = splitstring.slice(1);
+            alert('myFunc! ' + thing_clicked_name +' ' +mystr +' (' + the_coords + ')'); // name of thing clicked!
+            if (e.which) { rightclick = (e.which == 3);}
+            else if (e.button) {rightclick = (e.button == 2);}
+            alert('Rightclick: ' + rightclick); // true or false
+            //if ( [7,5] == the_coords ) alert('centre'); // does not work, assume array compare not possible
+            if ( centre_cord[0] == the_coords[0] && centre_cord[1] == the_coords[1] ) {alert('centre');}
+            alert(document.getElementById('move_str').value);
+            document.getElementById('move_str').value = ' (' + the_coords + ') ';
+            //this.src = 'http://127.0.0.1:8088/pieces_46x46/1_laser3.gif'
+            // http://www.quirksmode.org/js/strings.html
+            // http://fahdi.wordpress.com/title-javascript-check-to-see-if-string-starts-with-ste-or-ste/
+            // http://www.oluyede.org/blog/2006/08/16/startswith-and-endswith-in-javascript-15/
+            // http://www.quirksmode.org/js/this.html
+            // 
+        }
+        
+        normal_visibility = 1;
+        selected_visibility = 0.6;
+        text_entry_name = 'move_str'; // NOTE at the moment this is generated in cherry_alc.py :-(
+        move_form_name = 'move_form'; // NOTE at the moment this is generated in cherry_alc.py :-(
+        lastClickCoords = [-1,-1];
+        num_rotations = 0;
+        orig_rotations = -1;
+        new_rotation = -1;
+        orig_image = '';
+        var jg = 0; // global canvas/pixel buffer for gfx painting
+
+        // set_image_visibility -- takes in an IMG tag/id
+        // seriously thinking about making this the mechanism for displaying frozen pieces....
+        // other option is to simple have 3 player pieces, player one, player two... and frozen player which both 1 and 2 share
+        // in amiga alc the frozzen piece is just one solid grey colour (i.e. can't even see mirror side)
+        function set_image_visibility(self, visibility)
+        {
+            if (self.style.MozOpacity)
+                {self.style.MozOpacity=visibility;}
+            else if (self.filters)
+            {
+                self.filters.alpha.opacity=visibility*100;
+                // set highlighted border??
+            }
+        }
+        
+        // set_image_visibility -- takes in an IMG tag/id
+        function set_image_border(self)
+        {
+            // doesn't appear to work in IE (6)
+            // set highlighted border??
+            self.border=2; // this is nasty as it relies on the background bage colour, just a place marker hack until can get sorted properly :-(
+            //self.border=1; // this is nasty as it relies on the background bage colour, just a place marker hack until can get sorted properly :-(
+            // really want it to be yellow (or some definite colour
+            // would really like to use the table TD border "thing" to avod re-size
+        }
+        
+        // unset_image_highlighted -- takes in an IMG tag/id
+        function unset_image_set_image_border(self)
+        {
+            // set highlighted border??
+            self.border=0; // this is nasty as it relies on the background bage colour, just a place marker hack until can get sorted properly :-(
+        }
+        
+        // set_image_visibility -- takes in an IMG tag/id
+        function set_image_highlighted(self)
+        {
+            set_image_border(self);
+            
+            set_image_visibility(self, selected_visibility);
+        }
+        
+        // unset_image_highlighted -- takes in an IMG tag/id
+        function unset_image_highlighted(self)
+        {
+            unset_image_set_image_border(self);
+            
+            set_image_visibility(self, normal_visibility);
+        }
+        
+        function handle_mousewheel(delta) {
+            // going to be used as a rotation mechanism
+            if (delta < 0)
+                {rotate_clockwise();}
+            else
+                {rotate_anticlockwise();}
+        }
+        // from http://adomas.org/javascript-mouse-wheel/ includes comments        
+        /** This is high-level function.
+         * It must react to delta being more/less than zero.
+         */
+        function handle_mousewheel_test(delta) {
+            // going to be used as a rotation mechanism
+            if (delta < 0)
+                {alert("delta < 0 ;; DOWN rotated towards bottom of mouse");}
+            else
+                {alert("delta >= 0 ;; UP rotated towards top of mouse");}
+        }
+        
+        /** Event handler for mouse wheel event.
+         */
+        function wheel(event){
+            var delta = 0;
+            if (!event) /* For IE. */
+                {event = window.event;}
+            if (event.wheelDelta) { /* IE/Opera. */
+                delta = event.wheelDelta/120;
+                /** In Opera 9, delta differs in sign as compared to IE.
+                 */
+                if (window.opera)
+                    {delta = -delta;}
+            } else if (event.detail) { /** Mozilla case. */
+                /** In Mozilla, sign of delta is different than in IE.
+                 * Also, delta is multiple of 3.
+                 */
+                delta = -event.detail/3;
+            }
+            /** If delta is nonzero, handle it.
+             * Basically, delta is now positive if wheel was scrolled up,
+             * and negative, if wheel was scrolled down.
+             */
+            if (delta)
+                {handle_mousewheel(delta);}
+            /** Prevent default actions caused by mouse wheel.
+             * That might be ugly, but we handle scrolls somehow
+             * anyway, so don't bother here..
+             */
+            if (event.preventDefault)
+                {event.preventDefault();}
+            event.returnValue = false;
+        }
+        
+        function capture_mousewheel(){
+            // NOTE does not support Konqueror, OmniWeb, iCab
+
+            if (window.addEventListener)
+            {
+                /** DOMMouseScroll is for mozilla. */
+                window.addEventListener('DOMMouseScroll', wheel, false);
+            }
+            /** IE/Opera. */
+            window.onmousewheel = document.onmousewheel = wheel;
+        }
+        
+        function release_mousewheel(){
+            if (window.removeEventListener)
+            {
+                /** DOMMouseScroll is for mozilla. */
+                window.removeEventListener('DOMMouseScroll', wheel, false);
+            }
+            /** IE/Opera. */
+            window.onmousewheel = document.onmousewheel = null;
+        }
+        
+        function reset_move_info()
+        {
+            if ( lastClickCoords[0] != -1 && lastClickCoords[1] != -1 )
+            {
+                last_tile = document.getElementById('tile_'+lastClickCoords[0]+'_'+lastClickCoords[1]);
+                unset_image_highlighted(last_tile);
+                last_tile.src = orig_image;
+                
+                document.getElementById(text_entry_name).value = '';
+                lastClickCoords = [-1,-1];
+                num_rotations = 0;
+                orig_rotations = -1;
+                new_rotation = -1;
+                orig_image = '';
+                
+                release_mousewheel();
+            }
+        }
+
+        function take_turn(move_str)
+        {
+            //reset_move_info(); //??
+            document.getElementById(text_entry_name).value = move_str;
+            document.getElementById(move_form_name).submit();
+        }
+
+
+        // from http://blog.firetree.net/2005/07/04/javascript-find-position/ also see http://www.quirksmode.org/js/findpos.html
+        function findPosX(obj) {
+            var curleft = 0;
+            if (obj.offsetParent) {
+                while (1) {
+                    curleft+=obj.offsetLeft;
+                    if (!obj.offsetParent) {
+                        break;
+                    }
+                    obj=obj.offsetParent;
+                }
+            } else if (obj.x) {
+                curleft+=obj.x;
+            }
+            return curleft;
+        }
+        function findPosY(obj) {
+            var curtop = 0;
+            if (obj.offsetParent) {
+                while (1) {
+                    curtop+=obj.offsetTop;
+                    if (!obj.offsetParent) {
+                        break;
+                    }
+                    obj=obj.offsetParent;
+                }
+            } else if (obj.y) {
+                curtop+=obj.y;
+            }
+            return curtop;
+        }
+        
+        var shot_colour="blue";
+        function draw_shot(drawbuf, direction, tile_x, tile_y) {
+            // tile_x, tile_y are board positions/co-ords NOT pixel co-ords
+            var tileWidth=0;
+            var tileHeight=0; // make these global save on lookup??
+            var end_x=0;
+            var end_y=0;
+            var start_x=0;
+            var start_y=0;
+            
+                        
+            temp_piece = document.getElementById('tile_'+tile_x+'_'+tile_y); // use tostring??
+            tileWidth=temp_piece.clientWidth;
+            tileHeight=temp_piece.clientHeight;
+            start_x = findPosX(temp_piece);
+            start_y = findPosY(temp_piece);
+            
+            if ( direction ==  135 || direction ==  315 ) // SOUTH_EAST, NORTH_WEST
+            {
+                end_x = start_x + tileWidth;
+                end_y = start_y + tileHeight;
+            }
+            if ( direction ==  45 || direction ==  225 ) // NORTH_EAST, SOUTH_WEST
+            {
+                end_x = start_x;
+                start_x = start_x + tileWidth;
+                //start_y = start_y ;
+                end_y = start_y + tileHeight;
+            }
+            if ( direction ===  0 || direction ==  180 ) // NORTH, SOUTH
+            {
+                start_x = start_x + tileWidth/2;
+                end_y = start_y + tileHeight;
+                end_x = start_x;
+            }
+            if ( direction ==  90 || direction ==  270 ) // EAST, WEST
+            {
+                start_y = start_y + tileWidth/2;
+                end_y = start_y;
+                end_x = start_x + tileWidth;
+            }
+
+            drawbuf.setStroke(4); // set width of line
+            //drawbuf.setColor("#ff0000"); // red
+            //drawbuf.setColor("green");
+            drawbuf.setColor(shot_colour);
+            drawbuf.drawLine(start_x, start_y, end_x, end_y);
+            drawbuf.paint();
+        }
+        
+        function draw_hit(drawbuf, tile_x, tile_y) {
+            // tile_x, tile_y are board positions/co-ords NOT pixel co-ords
+            var tileWidth=0;
+            var tileHeight=0; // make these global save on lookup??
+            var end_x=0;
+            var end_y=0;
+            var start_x=0;
+            var start_y=0;
+            
+                        
+            temp_piece = document.getElementById('tile_'+tile_x+'_'+tile_y); // use tostring??
+            tileWidth=temp_piece.clientWidth;
+            tileHeight=temp_piece.clientHeight;
+            start_x = findPosX(temp_piece);
+            start_y = findPosY(temp_piece);
+            
+            //start_x = start_x + tileWidth/2;
+            //start_y = start_y + tileWidth/2;
+            end_x = tileWidth;
+            end_y = tileHeight;
+            
+
+            //drawbuf.setStroke(3); // set width of line
+            drawbuf.setColor(shot_colour);
+            drawbuf.fillEllipse(start_x, start_y, end_x, end_y);
+            // TODO consider using fillPolygon or even lots of lines criss-crossed
+            drawbuf.paint();
+        }
+        
+        function myFunc(e) {
+            // see http://www.quirksmode.org/js/introevents.html
+            var mystr="";
+            var targ;
+            //var jg = new jsGraphics("alc_board"); // see http://www.walterzorn.com/jsgraphics/jsgraphics_e.htm
+
+
+            thing_clicked_name = this.id;
+            
+            //temp_clickedpieceinfo = ' parent:' + this.parentNode.nodeName + ' ' + thing_clicked_name + ' pos: ' + findPosX(this).toString() + ', ' + findPosY(this).toString();
+            //the_alc_board = document.getElementById("alc_board");
+            //temp_boardinfo = ' the_alc_board pos: '  + findPosX(the_alc_board).toString() + ', ' + findPosY(the_alc_board).toString();
+            //alert(temp_clickedpieceinfo + ' ** ' + temp_boardinfo );
+            
+            //temp_piece_tile_0_0 = document.getElementById("tile_0_0");
+            //temp_piece_tile_1_1 = document.getElementById("tile_1_1");
+            //temp_piece_tile_14_10 = document.getElementById("tile_14_10");
+            //start_x = findPosX(temp_piece_tile_0_0);
+            //start_y = findPosY(temp_piece_tile_0_0);
+            //end_x = findPosX(temp_piece_tile_14_10);
+            //end_y = findPosY(temp_piece_tile_14_10);
+            //end_x = findPosX(temp_piece_tile_1_1);
+            //end_y = findPosY(temp_piece_tile_1_1);
+            //end_x = start_x + temp_piece_tile_0_0.clientWidth;
+            //end_y = start_y + temp_piece_tile_0_0.clientHeight;
+            
+            //jg.setStroke(3); // set width of line
+            //jg.setColor("#ff0000"); // red
+            //jg.drawLine(start_x, start_y, end_x, end_y); // co-ordinates related to the DIV (canvas)
+            ////jg.drawLine(10, 113, 220, 55); // co-ordinates related to the DIV (canvas)
+            ////jg.fillEllipse(220, 55, 10, 10);  
+            
+            //jg.setColor("#0000ff"); // blue
+            //jg.drawLine(0, 0, 300, 100); // co-ordinates related to the table (canvas)
+            //jg.fillEllipse(300, 100, 10, 10);  
+            //jg.paint();
+            
+            //draw_shot(jg, 45, 0, 0);
+            //draw_shot(jg, 45, 2, 3);
+            //draw_shot(jg, 225, 1, 4);
+            
+            //draw_shot(jg, 0, 2, 4);
+            //draw_shot(jg, 180, 2, 5);
+            
+            //draw_shot(jg, 90, 2, 7);
+            //draw_shot(jg, 270, 1, 7);
+            
+            //draw_shot(jg, 135, 13, 4);
+            //draw_shot(jg, 135, 14, 5);
+            
+            //draw_hit(jg, 1, 9);
+            
+            splitstring = thing_clicked_name.split("_");
+            mystr = "(" + splitstring[1] + ", "  + splitstring[2] + ")";
+            the_coords = splitstring.slice(1);
+            //alert('myFunc! ' + thing_clicked_name +' ' +mystr +' (' + the_coords + ')' + this.src); // name of thing clicked!
+            if ( lastClickCoords[0] == the_coords[0] && lastClickCoords[1] == the_coords[1] )
+            {
+                // same tile selected as last time so unselect it
+                ////alert('same coords clicked');
+                //cancel_move();
+                //if (orig_rotations == new_rotation && new_rotation != -1)
+                if (new_rotation != -1)
+                {
+                    if (orig_rotations == new_rotation )
+                    {
+                        cancel_move();
+                    }
+                    else
+                    {
+                        /* this is a rotate move */
+                        rotate_move_str = document.getElementById(text_entry_name).value;
+                        take_turn(rotate_move_str);
+                    }
+                }
+                else
+                {
+                    cancel_move();
+                }
+            }
+            else
+            {
+                last_tile = document.getElementById('tile_'+the_coords[0]+'_'+the_coords[1]);
+                orig_image = last_tile.src;
+                if (document.getElementById(text_entry_name).value === '' || ( lastClickCoords[0] == -1 && lastClickCoords[1] == -1 ))
+                {
+                    document.getElementById(text_entry_name).value = ' (' + the_coords + ') ';
+                    lastClickCoords = the_coords;
+                    set_image_highlighted(this);
+                    capture_mousewheel();
+                }
+                else
+                {
+                    last_tile = document.getElementById('tile_'+lastClickCoords[0]+'_'+lastClickCoords[1]);
+                    unset_image_highlighted(last_tile);
+                    document.getElementById(text_entry_name).value = 'move ' + '(' + lastClickCoords  + ')' + ' (' + the_coords + ')';
+                    lastClickCoords = [-1,-1];
+                    document.getElementById(move_form_name).submit(); // document.move_form.submit();
+                }
+            }
+            
+        }
+        
+        function cancel_move()
+        {
+            reset_move_info();
+            hide_shots(); /* over kill? */
+        }
+        
+        function pass_turn()
+        {
+            take_turn('pass');
+        }
+
+        function shoot()
+        {
+            document.getElementById(text_entry_name).value = 'shoot ' + document.getElementById(text_entry_name).value;
+            document.getElementById(move_form_name).submit();
+        }
+        
+        function oldrotate()
+        {
+            //var local_num_rotations=0;
+            var local_num_rotations=8; // 8 is bad or no rotations depending on how you look at it
+            if (local_num_rotations >= 8)
+                {local_num_rotations = local_num_rotations - 8;}
+            if (local_num_rotations === 0)
+            {
+                alert('back to orig not rotating');
+                //last_tile = document.getElementById('tile_'+lastClickCoords[0]+'_'+lastClickCoords[1])
+                //visibility = normal_visibility;
+                //set_image_visibility(last_tile, visibility);
+            }
+            else
+            {
+                //if (local_num_rotations >= 0 && local_num_rotations <= 7 ) // maybe too paranoid?
+                document.getElementById(text_entry_name).value = 'rotate ' + document.getElementById(text_entry_name).value + ' local_num_rotations='+local_num_rotations;
+                document.getElementById(move_form_name).submit();
+            }
+        }
+        
+        // rotate clock wise one rotation, on-screen only
+        function rotate()
+        {
+            if ( lastClickCoords[0] != -1 && lastClickCoords[1] != -1 )
+            {
+                num_rotations = num_rotations + 1;
+                if (num_rotations >= 8)
+                    {num_rotations = num_rotations - 8;}
+                if (num_rotations < 0)
+                    {num_rotations = num_rotations + 8;}
+                last_tile = document.getElementById('tile_'+lastClickCoords[0]+'_'+lastClickCoords[1]);
+                move_str = 'rotate ' + '(' + lastClickCoords + ') '+ ' num_rotations='+num_rotations;
+                
+                // this.src = 'http://127.0.0.1:8088/pieces_46x46/1_laser3.gif'
+                // set rotated image
+                bitmap_src = last_tile.src;
+                if (orig_rotations == -1)
+                {
+                    //bitmap_src  extract roataion, add num_rotations, round to under 8, insert near end of string
+                    //orig_rotations = parseInt(bitmap_src[bitmap_src.length - 5]); // no work in IE :-(
+                    //bitmap_src[bitmap_src.length - 5] // fails as "undefined in IE javascript!
+                    orig_rotations = parseInt(bitmap_src.charAt(bitmap_src.length - 5), 10);
+                }
+                
+                new_rotation = orig_rotations + num_rotations;
+                if (new_rotation >= 8)
+                    {new_rotation = new_rotation - 8;}
+                if (new_rotation < 0)
+                    {new_rotation = new_rotation + 8;}
+                bitmap_src = bitmap_src.slice(0, bitmap_src.length - 5) + new_rotation.toString() + bitmap_src.slice(bitmap_src.length - 4);
+                last_tile.src = bitmap_src;
+                // image already selected/highlighted
+                document.getElementById(text_entry_name).value = move_str;
+            }
+        }
+        
+        // rotate one rotation, on-screen only
+        function rotate_any(direction)
+        {
+            // direction is either +1 or -1, any other value is invalid (not currently note checked/enforced)
+            
+            if ( lastClickCoords[0] != -1 && lastClickCoords[1] != -1 )
+            {
+                num_rotations = num_rotations + direction;
+                if (num_rotations >= 8)
+                    {num_rotations = num_rotations - 8;}
+                if (num_rotations < 0)
+                    {num_rotations = num_rotations + 8;}
+                last_tile = document.getElementById('tile_'+lastClickCoords[0]+'_'+lastClickCoords[1]);
+                move_str = 'rotate ' + '(' + lastClickCoords + ') '+ ' num_rotations='+num_rotations;
+                
+                // this.src = 'http://127.0.0.1:8088/pieces_46x46/1_laser3.gif'
+                // set rotated image
+                bitmap_src = last_tile.src;
+                if (orig_rotations == -1)
+                {
+                    //bitmap_src  extract roataion, add num_rotations, round to under 8, insert near end of string
+                    //orig_rotations = parseInt(bitmap_src[bitmap_src.length - 5]); // no work in IE :-(
+                    //bitmap_src[bitmap_src.length - 5] // fails as "undefined in IE javascript!
+                    orig_rotations = parseInt(bitmap_src.charAt(bitmap_src.length - 5), 10);
+                }
+                
+                new_rotation = orig_rotations + num_rotations;
+                if (new_rotation >= 8)
+                    {new_rotation = new_rotation - 8;}
+                if (new_rotation < 0)
+                    {new_rotation = new_rotation + 8;}
+                bitmap_src = bitmap_src.slice(0, bitmap_src.length - 5) + new_rotation.toString() + bitmap_src.slice(bitmap_src.length - 4);
+                last_tile.src = bitmap_src;
+                // image already selected/highlighted
+                document.getElementById(text_entry_name).value = move_str;
+            }
+        }
+        
+        // rotate clockwise one rotation, on-screen only
+        function rotate_clockwise()
+        {
+            //rotate();
+            rotate_any(1);
+        }
+        
+        // rotate anti-clockwise one rotation, on-screen only
+        function rotate_anticlockwise()
+        {
+            rotate_any(-1);
+        }
+        
+        function deJSON(inJSONtext) 
+        {
+            /* wrapper function around what ever string to javascript routine(s) are used */
+            /* for now, as we (foolishly) trust our selves use eval() */
+            /* consider using http://www.json.org/json.js */
+            
+            return eval('(' + inJSONtext + ')');
+        }
+        
+        function determine_player_turn() {
+            // temp hack to change BODY CSS
+            /* work out which player is taking a turn and change screen colour to reflect this */
+            var temp_dom_obj = document.getElementById('moves_left');
+            var player='';
+            for( var x = 0; x < temp_dom_obj.attributes.length; x++ ) {
+                if( temp_dom_obj.attributes[x].nodeName.toLowerCase() == 'class' ) {
+                    player=temp_dom_obj.attributes[x].nodeValue.replace("player_","");
+                }
+            }
+            //temp_dom_obj = document.getElementByTag('body');
+            temp_dom_obj = document.getElementById('body');
+            //temp_dom_obj.class = "body." + player;
+            temp_dom_obj.className = player;
+        }
+        
+        function show_shots() {
+            // Works in Firefox, does not work in IE :-(
+            // display shots/hits/explosions (if frozen not actually an explosion) on board
+            // relies on global "jg" for canvas
+            // relies on "shot_info" element in DOM containing JSON encoded data
+            var EFFECTIVE_HIT = -9999; // constant copied from Python source
+            
+            //myJSONtext = "[[[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [0, -9999], [], [], [], [], [], [], [], [], [], [], [], []], [[90], [90], [90, 180, 0], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [180], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [180, -9999], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []]]";
+            // look up JSON data, could make a lookup to the server and be AJAX'y
+            shot_obj = document.getElementById('shot_info');
+            for( var x = 0; x < shot_obj.attributes.length; x++ ) {
+                if( shot_obj.attributes[x].nodeName.toLowerCase() == 'value' ) {
+                    myJSONtext = shot_obj.attributes[x].nodeValue ;
+                }
+            }
+            // de-JSON'ing shot array data
+            var shot_array = deJSON(myJSONtext);
+            
+            for (row=0; row<shot_array.length; row++)
+            {
+                current_row = shot_array[row];
+                for (column=0; column<current_row.length; column++)
+                {
+                    current_column = current_row[column];
+                    if (current_column.length > 0)
+                    {
+                        for (i=0; i<current_column.length; i++)
+                        {
+                            shot_info = current_column[i];
+                            if (shot_info == EFFECTIVE_HIT)
+                                {draw_hit(jg, column, row);}
+                            else
+                                {draw_shot(jg, shot_info, column, row);}
+                        }
+                    }
+                }
+            }
+            
+        }
+        function start_hide_shots_timer()
+        {
+            /* onl called at start up, if user shows shots, they are responsible for hiding them again */
+            setTimeout('hide_shots();',2000); /* 2 Secs */
+        }
+        function hide_shots() {
+            // hide/remove shots that show_shots() displays
+            jg.clear();
+        }
+        
+        function debug_show_shots() {
+            var EFFECTIVE_HIT = -9999;
+            // test showing some shots with a hard coded array - idealy use json to get ito client but could just place in html/script
+            shot_array = [[[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [] , [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [90], [90, -9999], [],  [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [ ], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [],  [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [],  [], [], [], [], [], [], [], [], [], [], [], [], []]];
+            
+            // alert(shot_array.length);// 11 correct!
+            //alert(shot_array[0].length);// 15 correct!
+            //alert(shot_array[1].length);//  15 correct!
+            //alert(shot_array[6].length);//  15 correct!
+            //alert(shot_array[6][0].length);//  0 correct
+            //alert(shot_array[6][1].length);// 1 correct
+            //alert(shot_array[6][2].length);// 2 correct
+            //alert(shot_array[6][3].length);// 0 correct
+            //alert(shot_array.length);
+            
+            for (row=0; row<shot_array.length; row++)
+            {
+                current_row = shot_array[row];
+                //alert(row + ' ' + current_row );
+                for (column=0; column<current_row.length; column++)
+                {
+                    current_column = current_row[column];
+                    //alert(column+ ' ' + current_column );
+                    if (current_column.length > 0)
+                    {
+                        //alert('row: ' + row + ' ' + 'col: ' + column + ' ' + current_column + ' ' + current_column.length );
+                        for (i=0; i<current_column.length; i++)
+                        {
+                            shot_info = current_column[i];
+                            if (shot_info == EFFECTIVE_HIT)
+                            {
+                                draw_hit(jg, column, row);
+                            }
+                            else
+                            {
+                                draw_shot(jg, shot_info, column, row);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return;
+            // couldn't get iteration to work :-(
+            // possibly due to wart of for loops? See http://yuiblog.com/blog/2006/09/26/for-in-intrigue/
+            for (var row in shot_array ) 
+            {
+                // array iteration is different to Python  :-( looks like one gets an index not the actual item
+                current_row = shot_array[row];
+                alert(current_row );
+                
+                for (var column in current_row )
+                {
+                    current_column = current_row[column];
+                    if (current_column.length > 0)
+                    {
+                        alert('row: ' + row + ' ' + 'col: ' + column + ' ' + current_column + ' ' + current_column.length );
+                    }
+                    //for (var shot_info in column )
+                    //{
+                        
+                        //if (shot_info.length > 0)
+                        //{
+                        //    alert('row: ' + row_num + ' ' + 'col: ' + col_num + ' ' + shot_info+ ' ' + shot_info.length );
+                        //}
+                    //}
+                }
+            }
+        }
+        
+        function myInit() {
+            //document.getElementById('tile_0_0').onclick = myFunc;
+            //document.getElementById('tile_0_1').onclick = myFunc;
+            var width=14;
+            var height=10;
+            jg = new jsGraphics("alc_board"); // see http://www.walterzorn.com/jsgraphics/jsgraphics_e.htm
+            for(tempY = 0; tempY <= height; tempY++)
+            {
+                for(tempX = 0; tempX <= width; tempX++)
+                {
+                    document.getElementById('tile_'+tempX+'_'+tempY).onclick = myFunc;
+                }
+            }
+        }
+
+        // from http://www.netlobo.com/div_hiding.html
+        function toggleLayer(whichLayer)
+        {
+            if (document.getElementById)
+            {
+                // this is the way the standards work
+                var style2 = document.getElementById(whichLayer).style;
+                style2.display = style2.display? "":"block";
+            }
+            else if (document.all)
+            {
+                // this is the way old msie versions work
+                var style2 = document.all[whichLayer].style;
+                style2.display = style2.display? "":"block";
+            }
+            else if (document.layers)
+            {
+                // this is the way nn4 works
+                var style2 = document.layers[whichLayer].style;
+                style2.display = style2.display? "":"block";
+            }
+        }
+        
+        // main
+        addLoadEvent(myInit);
+        //addLoadEvent(determine_player_turn); // temp hack to change BODY CSS
+        addLoadEvent(show_shots);
+        addLoadEvent(start_hide_shots_timer);
+        //addLoadEvent(capture_mousewheel);
+        //-->
+    </script>
+    
+</head>
+<body id="body" class="" node="con:bodyclass">
+
+<!-- 
+TODO list 
+
+DONE TODO javascript: timer for shot display (on initial page view), clear after 2 secs?
+DONE TODO javascript/html: TODO add cancel button
+DONE TODO javascript: if select piece, rotate, select same piece - PERFORM MOVE
+TODO javascript: add right click is cancel
+TODO javascript: if rotate, then shot. issue rotate then shoot (not really possibly at the moment with single move send)
+TODO javascript: shot info in JSON, move shot info into dict item in JSON data, want to add new stuff to it
+TODO html: clean up show/hide shots (remove debug one)
+TODO add icons for on screen buttons (shoot, pass, etc.)
+TODO javascript: change laser/freezer colours to be different
+TODO javascript: sounds? needs model update for event
+TODO javascript: animated particle explosions? could be done just on shot information
+//-->
+
+<div><h2 node="con:debug_info">WARNING debug mode, random is not random!</h2></div>
+
+<div node="con:game_winner"><h1>Game Over! Winner: player info</h1></div>
+
+<div>
+<table id="alc_board" class="alc_board" style="">
+  <tbody>
+
+    <tr node="rep:table_rows">
+        <td node="rep:table_cols">
+            <img node="con:single_table_cell" id="tile_%d_%d" style="filter:alpha(opacity=100);-moz-opacity:1; width: %dpx; height: %dpx;" alt="" src="./%s" title="%r"/>
+        </td>
+    </tr>
+
+  </tbody>
+</table>
+
+    <table node="del:" class="alc_board">
+    <!-- This block is only here for "viewing" and testing the template, this is removed at render time //-->
+      <tbody>
+    
+        <tr>
+            <td>
+                <img src="./pieces_46x46/1_oneway_mirror2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(0, 0)" alt="" id="tile_0_0" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_mirror3.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(1, 0)" alt="" id="tile_1_0" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(2, 0)" alt="" id="tile_2_0" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(3, 0)" alt="" id="tile_3_0" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(4, 0)" alt="" id="tile_4_0" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(5, 0)" alt="" id="tile_5_0" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(6, 0)" alt="" id="tile_6_0" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(7, 0)" alt="" id="tile_7_0" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(8, 0)" alt="" id="tile_8_0" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(9, 0)" alt="" id="tile_9_0" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(10, 0)" alt="" id="tile_10_0" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(11, 0)" alt="" id="tile_11_0" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(12, 0)" alt="" id="tile_12_0" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_mirror5.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(13, 0)" alt="" id="tile_13_0" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_oneway_mirror6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(14, 0)" alt="" id="tile_14_0" />
+            </td>
+        </tr>
+    <tr>
+            <td>
+    
+                <img src="./pieces_46x46/1_mirror2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(0, 1)" alt="" id="tile_0_1" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_mirror0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(1, 1)" alt="" id="tile_1_1" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(2, 1)" alt="" id="tile_2_1" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(3, 1)" alt="" id="tile_3_1" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(4, 1)" alt="" id="tile_4_1" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(5, 1)" alt="" id="tile_5_1" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(6, 1)" alt="" id="tile_6_1" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/1_hole_square0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(7, 1)" alt="" id="tile_7_1" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(8, 1)" alt="" id="tile_8_1" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(9, 1)" alt="" id="tile_9_1" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(10, 1)" alt="" id="tile_10_1" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(11, 1)" alt="" id="tile_11_1" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(12, 1)" alt="" id="tile_12_1" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_mirror0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(13, 1)" alt="" id="tile_13_1" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/2_mirror6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(14, 1)" alt="" id="tile_14_1" />
+            </td>
+        </tr>
+    <tr>
+            <td>
+                <img src="./pieces_46x46/1_bomb2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(0, 2)" alt="" id="tile_0_2" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_oneway_mirror2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(1, 2)" alt="" id="tile_1_2" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(2, 2)" alt="" id="tile_2_2" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(3, 2)" alt="" id="tile_3_2" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(4, 2)" alt="" id="tile_4_2" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(5, 2)" alt="" id="tile_5_2" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(6, 2)" alt="" id="tile_6_2" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(7, 2)" alt="" id="tile_7_2" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(8, 2)" alt="" id="tile_8_2" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(9, 2)" alt="" id="tile_9_2" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(10, 2)" alt="" id="tile_10_2" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(11, 2)" alt="" id="tile_11_2" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(12, 2)" alt="" id="tile_12_2" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_oneway_mirror6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(13, 2)" alt="" id="tile_13_2" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_bomb6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(14, 2)" alt="" id="tile_14_2" />
+            </td>
+        </tr>
+    
+    <tr>
+            <td>
+                <img src="./pieces_46x46/1_freezer6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(0, 3)" alt="" id="tile_0_3" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_transporter2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(1, 3)" alt="" id="tile_1_3" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_stomper2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(2, 3)" alt="" id="tile_2_3" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(3, 3)" alt="" id="tile_3_3" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(4, 3)" alt="" id="tile_4_3" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(5, 3)" alt="" id="tile_5_3" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(6, 3)" alt="" id="tile_6_3" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_hole_square0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(7, 3)" alt="" id="tile_7_3" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(8, 3)" alt="" id="tile_8_3" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(9, 3)" alt="" id="tile_9_3" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(10, 3)" alt="" id="tile_10_3" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(11, 3)" alt="" id="tile_11_3" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_stomper6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(12, 3)" alt="" id="tile_12_3" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_transporter6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(13, 3)" alt="" id="tile_13_3" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_freezer2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(14, 3)" alt="" id="tile_14_3" />
+            </td>
+        </tr>
+    <tr>
+            <td>
+                <img src="./pieces_46x46/1_laser2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(0, 4)" alt="" id="tile_0_4" />
+            </td>
+    <td>
+    
+                <img src="./pieces_46x46/1_prism2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(1, 4)" alt="" id="tile_1_4" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_stomper2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(2, 4)" alt="" id="tile_2_4" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(3, 4)" alt="" id="tile_3_4" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(4, 4)" alt="" id="tile_4_4" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(5, 4)" alt="" id="tile_5_4" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(6, 4)" alt="" id="tile_6_4" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(7, 4)" alt="" id="tile_7_4" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(8, 4)" alt="" id="tile_8_4" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(9, 4)" alt="" id="tile_9_4" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(10, 4)" alt="" id="tile_10_4" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(11, 4)" alt="" id="tile_11_4" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_stomper6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(12, 4)" alt="" id="tile_12_4" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_prism6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(13, 4)" alt="" id="tile_13_4" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_laser6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(14, 4)" alt="" id="tile_14_4" />
+            </td>
+    
+        </tr>
+    <tr>
+            <td>
+                <img src="./pieces_46x46/1_king2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(0, 5)" alt="" id="tile_0_5" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_freezer6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(1, 5)" alt="" id="tile_1_5" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_mirrorstomper2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(2, 5)" alt="" id="tile_2_5" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(3, 5)" alt="" id="tile_3_5" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(4, 5)" alt="" id="tile_4_5" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(5, 5)" alt="" id="tile_5_5" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(6, 5)" alt="" id="tile_6_5" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_warp0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(7, 5)" alt="" id="tile_7_5" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(8, 5)" alt="" id="tile_8_5" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(9, 5)" alt="" id="tile_9_5" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(10, 5)" alt="" id="tile_10_5" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(11, 5)" alt="" id="tile_11_5" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_mirrorstomper6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(12, 5)" alt="" id="tile_12_5" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/2_freezer2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(13, 5)" alt="" id="tile_13_5" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_king6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(14, 5)" alt="" id="tile_14_5" />
+            </td>
+        </tr>
+    <tr>
+            <td>
+                <img src="./pieces_46x46/1_laser2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(0, 6)" alt="" id="tile_0_6" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_prism2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(1, 6)" alt="" id="tile_1_6" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_stomper2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(2, 6)" alt="" id="tile_2_6" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(3, 6)" alt="" id="tile_3_6" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(4, 6)" alt="" id="tile_4_6" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(5, 6)" alt="" id="tile_5_6" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(6, 6)" alt="" id="tile_6_6" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(7, 6)" alt="" id="tile_7_6" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(8, 6)" alt="" id="tile_8_6" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(9, 6)" alt="" id="tile_9_6" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(10, 6)" alt="" id="tile_10_6" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(11, 6)" alt="" id="tile_11_6" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_stomper6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(12, 6)" alt="" id="tile_12_6" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_prism6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(13, 6)" alt="" id="tile_13_6" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_laser6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(14, 6)" alt="" id="tile_14_6" />
+    
+            </td>
+        </tr>
+    <tr>
+            <td>
+                <img src="./pieces_46x46/1_freezer6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(0, 7)" alt="" id="tile_0_7" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_transporter2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(1, 7)" alt="" id="tile_1_7" />
+            </td>
+    <td>
+    
+                <img src="./pieces_46x46/1_stomper2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(2, 7)" alt="" id="tile_2_7" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(3, 7)" alt="" id="tile_3_7" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(4, 7)" alt="" id="tile_4_7" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(5, 7)" alt="" id="tile_5_7" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(6, 7)" alt="" id="tile_6_7" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_hole_square0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(7, 7)" alt="" id="tile_7_7" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(8, 7)" alt="" id="tile_8_7" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(9, 7)" alt="" id="tile_9_7" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(10, 7)" alt="" id="tile_10_7" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(11, 7)" alt="" id="tile_11_7" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_stomper6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(12, 7)" alt="" id="tile_12_7" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_transporter6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(13, 7)" alt="" id="tile_13_7" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_freezer2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(14, 7)" alt="" id="tile_14_7" />
+            </td>
+        </tr>
+    <tr>
+            <td>
+    
+                <img src="./pieces_46x46/1_bomb2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(0, 8)" alt="" id="tile_0_8" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_oneway_mirror2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(1, 8)" alt="" id="tile_1_8" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(2, 8)" alt="" id="tile_2_8" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(3, 8)" alt="" id="tile_3_8" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(4, 8)" alt="" id="tile_4_8" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(5, 8)" alt="" id="tile_5_8" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(6, 8)" alt="" id="tile_6_8" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(7, 8)" alt="" id="tile_7_8" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(8, 8)" alt="" id="tile_8_8" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(9, 8)" alt="" id="tile_9_8" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(10, 8)" alt="" id="tile_10_8" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(11, 8)" alt="" id="tile_11_8" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(12, 8)" alt="" id="tile_12_8" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_oneway_mirror6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(13, 8)" alt="" id="tile_13_8" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/2_bomb6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(14, 8)" alt="" id="tile_14_8" />
+            </td>
+        </tr>
+    <tr>
+            <td>
+                <img src="./pieces_46x46/1_mirror2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(0, 9)" alt="" id="tile_0_9" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_mirror4.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(1, 9)" alt="" id="tile_1_9" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(2, 9)" alt="" id="tile_2_9" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(3, 9)" alt="" id="tile_3_9" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(4, 9)" alt="" id="tile_4_9" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(5, 9)" alt="" id="tile_5_9" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(6, 9)" alt="" id="tile_6_9" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_hole_square0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(7, 9)" alt="" id="tile_7_9" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(8, 9)" alt="" id="tile_8_9" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(9, 9)" alt="" id="tile_9_9" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(10, 9)" alt="" id="tile_10_9" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(11, 9)" alt="" id="tile_11_9" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(12, 9)" alt="" id="tile_12_9" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_mirror4.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(13, 9)" alt="" id="tile_13_9" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_mirror6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(14, 9)" alt="" id="tile_14_9" />
+            </td>
+        </tr>
+    
+    <tr>
+            <td>
+                <img src="./pieces_46x46/1_oneway_mirror2.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(0, 10)" alt="" id="tile_0_10" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_mirror1.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(1, 10)" alt="" id="tile_1_10" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(2, 10)" alt="" id="tile_2_10" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(3, 10)" alt="" id="tile_3_10" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(4, 10)" alt="" id="tile_4_10" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(5, 10)" alt="" id="tile_5_10" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(6, 10)" alt="" id="tile_6_10" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(7, 10)" alt="" id="tile_7_10" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(8, 10)" alt="" id="tile_8_10" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(9, 10)" alt="" id="tile_9_10" />
+            </td>
+    
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(10, 10)" alt="" id="tile_10_10" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(11, 10)" alt="" id="tile_11_10" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/1_blank0.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(12, 10)" alt="" id="tile_12_10" />
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_mirror7.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(13, 10)" alt="" id="tile_13_10" />
+    
+            </td>
+    <td>
+                <img src="./pieces_46x46/2_oneway_mirror6.gif" style="filter:alpha(opacity=100);-moz-opacity:1; width: 46px; height: 46px;" title="(14, 10)" alt="" id="tile_14_10" />
+            </td>
+        </tr>
+    
+      </tbody>
+    </table>
+
+</div>
+
+<div class="game_status2">
+    <p node="con:error_info" style="color: rgb(255, 0, 0);"></p>
+    <form id="move_form" action="alc" method="GET">
+        Move?
+        <input id="move_str" type="text" name="move_str" />
+        <input type=hidden name="piece_pictures" value="%s" node="con:piece_pictures"/>
+        <input type="submit" value="Perform Move"/>
+    </form>
+    <!--
+        NOTE! no code to prevent multiple submits from same "instance"
+    //-->
+    <div>
+        <a id="pass" onclick="pass_turn();">Pass</a>
+        <a id="shoot" onclick="shoot();">Shoot</a>
+        <a id="rotate" onclick="rotate();">Rotate</a>
+        <a id="cancel" onclick="cancel_move();">Cancel</a>
+    </div>
+    <p>examples:</p>
+    <blockquote>
+        pass<br>
+        move (5,3) (5,5)<br>
+        rotate (2,4) NORTH<br>
+        shoot (5,3)<br>
+        <br>
+        r (2,4) 0<br>
+        r (3,4) NORTH<br>
+    </blockquote>
+    <a id="show_shots" onclick="show_shots();">show_shots</a>
+    <a id="clear_shots" onclick="hide_shots();">clear shots</a>
+    <a id="debug_show_shots" onclick="debug_show_shots();">debug_show_shots</a>
+    <br><a href="/tile_sizes">change board size</a>
+    <br><a href="/losses">show losses</a>
+</div>
+
+<br>
+
+<div class="game_status">
+Round: <p node="-con:round_num">xxx</p><br>
+Player Turn: <p id="player_turn" node="-con:player_turn">xxx</p><br>
+Moves Left: <div id="moves_left" class="player_red" node="con:moves_left">xxx</div>
+</div>
+
+    <a id="show_last_shots" onclick="show_shots();">show_shots</a>
+    <a id="clear_last_shots" onclick="hide_shots();">clear_shots</a>
+    <a href="javascript:toggleLayer('instructions');" title="Show/Hide instructions">Show/Hide instructions</a>
+
+<div id="instructions" class="instructions">
+    <p>For game instructions a good starting resource is <a href="http://www.laserchess.org/instructions_alc.html">http://www.laserchess.org/instructions_alc.html</a></p>
+    
+    <p>To move a piece; click on it, then click on destination square. If you want to move a piece more than one square, you have to manually move the piece twice.<p>
+    <p>To rotate a piece; click on it, then either use up/down mouse wheel OR click on "rotate" text in Move box, once correct rotation is visible either click the same piece again or click the "Perform Move" button.<p>
+    <p>To shoot a piece; click on it, then click on "shoot" text in Move box.<p>
+    <p>To skip or finish a turn; click on "pass" text in Move box.<p>
+    <p>If a piece has been selected but need to cancel, click cancel (or if the piece has not been rotated select/click the the same piece again).</p>
+    <p>If the piece has been rotated and the same piece is clicked/selected again the rotation takes effect<p>
+    <p>Optionally instead of using the mouse, moves may be entered into the Move form via the keyboard. Hover the mouse over a tile to see the co-ordinates.<p>
+    <p>If a piece made a shot on the previous turn, the effects can be shown or hidden; click "show_shots" or "clear shots" text in Move box. Shots are not shown in Internet Explorer, only works in FireFox.<p>
+</div >
+
+<p id="shot_info" node="con:shot_info" value="[[[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [270, -9999], [270], [270]], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []], [[], [], [], [], [], [], [], [], [], [], [], [], [], [], []]]">This is pretty horrible, hide the shot data as an attribute. I'm not proud of this :-( Test data here is to test lasers work in different browsers</p>
+
+<!--
+    <p>
+        TODO game board needs coords on left and bottom<br/>
+        not important FIXME TODO (partially handled now) - add "dumb_str" passed in from caller! may not be possible with this templaet as wasnt to pass in raw HTML<br/>
+    </p>
+-->
+
+</body>
+</html>
