@@ -1118,10 +1118,14 @@ def html_boardV3(board, fileptr, piece_dirname=None, tile_xlen=None, tile_ylen=N
     game_winner = ''
     if board.winner is not None:
         #game_winner = 'Game Over! Winner: '+ str(board.winner)
-        game_winner = 'Game Over! Winner: '+ alc_model.player_map[board.winner][0].capitalize() # get player colour name
+        winner_colour = alc_model.player_map[board.winner][0]  # get player colour name
+        game_winner = 'Game Over! Winner: '+ winner_colour.capitalize()
+        current_player = winner_colour
+    else:
+        # overloading variable usage :-(
+        current_player = alc_model.player_map[board.current_player][0]
     alc_board_style="width: %dpx; height: %dpx;" % (tile_xlen, tile_ylen)
     current_round = board.rounds_played+1
-    current_player = alc_model.player_map[board.current_player][0]
     turns_left = board.turns_left
     moves_left_classname="player_%s" % current_player ## string; green or red
     error_info=error_text
