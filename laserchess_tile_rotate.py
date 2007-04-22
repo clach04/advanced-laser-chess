@@ -34,54 +34,39 @@ alc_mapping ={
     }
 
 
-def change_colours(in_image):
-    """poor colour filter/converter
-    """
-    out_image = in_image.copy()
-    out_image = out_image.convert() # convert to rgb
-    
-    colour_map ={(255, 180, 180): (180, 255, 180), (180, 72, 72): (72, 180, 72)}
-    
-    width, height = out_image.size
-    colour_counts={}
-    pixels_across = range(width)
-    for y in range(height):
-        for x in pixels_across:
-            pixel_info = out_image.getpixel((x, y))
-            #print pixel_info
-            try:
-                new_colour = colour_map[pixel_info]
-                out_image.putpixel((x, y), new_colour)
-            except KeyError, info:
+# default colour mapping
+p1top2_colours = {(255, 180, 180): (180, 255, 180), (180, 72, 72): (72, 180, 72)}
+p1tofrozen_colours = {(255, 180, 180): (180, 180, 180), (180, 72, 72): (180, 180, 180)}
+
+
+def change_colours(input_colour_map):
+    def private_filter(in_image):
+        """poor colour filter/converter
+        """
+        out_image = in_image.copy()
+        out_image = out_image.convert() # convert to rgb
+        
+        colour_map = input_colour_map
+        
+        width, height = out_image.size
+        colour_counts={}
+        pixels_across = range(width)
+        for y in range(height):
+            for x in pixels_across:
+                pixel_info = out_image.getpixel((x, y))
                 #print pixel_info
-                pass
-    
-    return out_image 
-    
-def change_colours_gray(in_image):
-    """poor colour filter/converter
-    Straight copy of change_colours with different colour mapping, REFACTOR me!
-    """
-    out_image = in_image.copy()
-    out_image = out_image.convert() # convert to rgb
-    
-    colour_map ={(255, 180, 180): (180, 180, 180), (180, 72, 72): (180, 180, 180)}
-    
-    width, height = out_image.size
-    colour_counts={}
-    pixels_across = range(width)
-    for y in range(height):
-        for x in pixels_across:
-            pixel_info = out_image.getpixel((x, y))
-            #print pixel_info
-            try:
-                new_colour = colour_map[pixel_info]
-                out_image.putpixel((x, y), new_colour)
-            except KeyError, info:
-                #print pixel_info
-                pass
-    
-    return out_image 
+                try:
+                    new_colour = colour_map[pixel_info]
+                    out_image.putpixel((x, y), new_colour)
+                except KeyError, info:
+                    #print pixel_info
+                    pass
+        
+        return out_image
+    return private_filter
+
+change_colours_p2 = change_colours(p1top2_colours)
+change_colours_gray = change_colours(p1tofrozen_colours)
 
 def dumb_filter_and_save(input_image, dumb_filter_func, new_filename):
     #dumb_filter_func(input_image).save(new_filename)
@@ -105,6 +90,9 @@ def create_piece_bitmaps(in_piece_name, out_piece_name, outfile_type, out_dirnam
     print im.format, im.size, im.mode
     if out_dirname is None:
         out_dirname="pieces_%(tile_width)dx%(tile_height)d" % locals()
+    else:
+        # not sure about this bit...
+        out_dirname=out_dirname+"_%(tile_width)dx%(tile_height)d" % locals()
     try:
         os.mkdir(out_dirname)
     except OSError, info:
@@ -130,10 +118,8 @@ def create_piece_bitmaps(in_piece_name, out_piece_name, outfile_type, out_dirnam
         # TODO change colour...., re-save with new filename prefixed with green
         player_number=2
         outfile=outfile_pattern % locals()
-        #change_colours(out).save(outfile)
-        dumb_filter_and_save(out, change_colours, outfile)
+        dumb_filter_and_save(out, change_colours_p2, outfile)
         frozen_outfile = outfile_pattern % { 'player_number':9, 'out_piece_name':out_piece_name, 'tile_count':tile_count}
-        #change_colours_gray(out).save(frozen_outfile)
         dumb_filter_and_save(out, change_colours_gray, frozen_outfile)
     
     infile=infile_pattern%(in_piece_name, 1)
@@ -155,13 +141,12 @@ def create_piece_bitmaps(in_piece_name, out_piece_name, outfile_type, out_dirnam
         # TODO change colour...., re-save with new filename prefixed with green
         player_number=2
         outfile=outfile_pattern % locals()
-        #change_colours(out).save(outfile)
-        dumb_filter_and_save(out, change_colours, outfile)
+        dumb_filter_and_save(out, change_colours_p2, outfile)
         frozen_outfile = outfile_pattern % { 'player_number':9, 'out_piece_name':out_piece_name, 'tile_count':tile_count}
-        #change_colours_gray(out).save(frozen_outfile)
         dumb_filter_and_save(out, change_colours_gray, frozen_outfile)
 
 #for piece_name in ['stomper', 'laser']:
 for piece_name in alc_mapping:
-    create_piece_bitmaps(piece_name, alc_mapping[piece_name], outfile_type)
+    #create_piece_bitmaps(piece_name, alc_mapping[piece_name], outfile_type)
+    create_piece_bitmaps(piece_name, alc_mapping[piece_name], outfile_type, out_dirname='testpieces')
 
