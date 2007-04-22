@@ -198,6 +198,10 @@ alc_mapping = laserchess_org_2alc_name_mapping
 infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\extracted_pieces_15x15\\1_%s%d.gif"
 alc_mapping = alc_names
 
+# amiga tile set
+infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\data\\extracted_pieces_45x45\\1_%s%d.gif"
+alc_mapping = alc_names
+
 #for piece_name in ['stomper', 'laser']:
 for piece_name in alc_mapping:
     #create_piece_bitmaps(infile_pattern, piece_name, alc_mapping[piece_name], outfile_type)
