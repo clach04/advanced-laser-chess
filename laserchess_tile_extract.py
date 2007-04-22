@@ -48,8 +48,8 @@ tile_xlen=17 # width
 tile_hlen=19 # height
 
 
-tile_width = tile_xlen
-tile_height = tile_hlen
+tile_width = box_without_border[2] - box_without_border[0] 
+tile_height = box_without_border[3] - box_without_border[1] 
 out_dirname = None
 if out_dirname is None:
     out_dirname="extracted_pieces_%(tile_width)dx%(tile_height)d" % locals()
@@ -70,6 +70,22 @@ outfile_pattern = os.path.join(out_dirname, outfile_pattern)
 # 2nd row down
 starty=1 * (tile_hlen-1)
 
+def extract_tiles(tile_countx, tile_county, player_number, piece_name, num_tiles=1, rotation=0):
+    """
+    FIXME TODO check if rotation in source matches alc rotation!!
+    may need to map rotation
+    """
+    if num_tiles != 1:
+        raise NotImplemented('num_tiles != 1')
+    startx=tile_countx * (tile_xlen-1)
+    starty=tile_county * (tile_hlen-1)
+    print (startx, starty)
+    box_with_border = (startx, starty, startx+tile_xlen, starty+tile_hlen)
+    region = im.crop(box_with_border)
+    region = region.crop(box_without_border)
+    outfile=outfile_pattern%(player_number, piece_name, rotation)
+    region.save(outfile)
+"""
 for tile_count in range(8*2):
     piece_name = 'stomper'
     #piece_name = 'test'
@@ -84,6 +100,50 @@ for tile_count in range(8*2):
     if tile_count>=8:
         outfile=outfile_pattern%(2, piece_name, tile_count-8)
     region.save(outfile)
+"""
+
+
+#extract_tiles(0, 0, 1, 'freezer', num_tiles=1, rotation=0)
+extract_tiles(4, 0, 1, 'freezer', num_tiles=1, rotation=0)
+extract_tiles(5, 0, 1, 'freezer', num_tiles=1, rotation=1)
+
+extract_tiles(0, 1, 1, 'stomper', num_tiles=1, rotation=0)
+extract_tiles(1, 1, 1, 'stomper', num_tiles=1, rotation=1)
+
+extract_tiles(0, 2, 1, 'way_mirror', num_tiles=1, rotation=0)
+extract_tiles(1, 2, 1, 'way_mirror', num_tiles=1, rotation=1)
+
+extract_tiles(0, 3, 1, 'mirror', num_tiles=1, rotation=0)
+extract_tiles(1, 3, 1, 'mirror', num_tiles=1, rotation=1)
+
+extract_tiles(0, 4, 1, 'laser', num_tiles=1, rotation=0)
+extract_tiles(1, 4, 1, 'laser', num_tiles=1, rotation=1)
+
+extract_tiles(4, 5, 1, 'prism', num_tiles=1, rotation=0)
+extract_tiles(5, 5, 1, 'prism', num_tiles=1, rotation=1)
+
+extract_tiles(16, 0, 1, 'bomb', num_tiles=1, rotation=0)
+extract_tiles(16, 1, 1, 'bomb', num_tiles=1, rotation=1)
+
+extract_tiles(18, 1, 1, 'mirrorstomper', num_tiles=1, rotation=0)
+extract_tiles(18, 1, 1, 'mirrorstomper', num_tiles=1, rotation=1)
+
+extract_tiles(16, 2, 1, 'king', num_tiles=1, rotation=0)
+extract_tiles(16, 2, 1, 'king', num_tiles=1, rotation=1)
+
+extract_tiles(16, 3, 1, 'transporter', num_tiles=1, rotation=0)
+extract_tiles(16, 3, 1, 'transporter', num_tiles=1, rotation=1)
+
+
+extract_tiles(0, 7, 1, 'warp', num_tiles=1, rotation=0)
+extract_tiles(0, 7, 1, 'warp', num_tiles=1, rotation=1) # coords are not the same as pieces :-(
+#extract_tiles(3, 7, 1, 'warp', num_tiles=1, rotation=1)
+
+extract_tiles(0, 6, 1, 'hole_square', num_tiles=1, rotation=0)
+extract_tiles(0, 6, 1, 'hole_square', num_tiles=1, rotation=1) # coords are not the same as pieces :-(
+#extract_tiles(5, 6, 1, 'hole_square', num_tiles=1, rotation=1)
+
+
 
 #out = im.resize((128, 128))
 #out = im.rotate(45) # degrees counter-clockwise
