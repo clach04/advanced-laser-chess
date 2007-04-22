@@ -305,7 +305,8 @@ def main(argv=None):
     config_dict.update({
         '/wz_jsgraphics.js': {
             'staticFilter.on': True,
-            'staticFilter.file': 'wz_jsgraphics.js'
+            #'staticFilter.file': 'wz_jsgraphics.js'
+            'staticFilter.file': os.path.join(this_module_path, 'wz_jsgraphics.js')
         }
     })
     
