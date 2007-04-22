@@ -1166,6 +1166,8 @@ class board(object):
     def enter_move(self, moveinfo):
         """performs a single moveinfo, where move is an instance of piece_move 
         """
+        if self.winner is not None:
+            raise InvalidMove('No more moves allowed. Game Over! Winner: '+ player_map[self.winner][0].capitalize() )
         self.init_shots()
         if moveinfo.move_type == MOVE_PASS:
             self.turns_left=0
