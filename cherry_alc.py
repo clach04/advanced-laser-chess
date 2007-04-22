@@ -1,6 +1,7 @@
 """
 debug single (web) user!!
 
+# TODO losses, needs to use pass in piece dirname via hidden form
 # TODO add in line HTML compression (either simple space removal and/or gzip)?
 # TODO Add cookie session or auth support so that only specific clients can make changes/view a specific game
 # TODO add multiple games per server?
