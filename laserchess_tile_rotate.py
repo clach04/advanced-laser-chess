@@ -16,9 +16,8 @@ outfile_type=".gif" ## creates images with web safe colours, so often get dither
 piece_name='stomper'
 piece_name='laser'
 
-# mappings from filenames in laserchess.org
-# alc_mapping[piece_name]
-alc_mapping ={
+# mappings from filenames in laserchess.org to alc names
+laserchess_org_2alc_name_mapping ={
     'bomb' : 'bomb', 
     'diagonal' : 'mirror', 
     'stunner' : 'freezer', 
@@ -31,6 +30,23 @@ alc_mapping ={
     'hyper' : 'transporter',
     'hole' : 'hole_square',
     'hyperhole' : 'warp',
+    'blank' : 'blank'
+    }
+
+# no mapping dict
+alc_names ={
+    'bomb' : 'bomb', 
+    'mirror' : 'mirror', 
+    'freezer' : 'freezer', 
+    'king' : 'king', 
+    'laser' : 'laser', 
+    'stomper' : 'stomper', 
+    'mirrorstomper' : 'mirrorstomper', 
+    'oneway_mirror' : 'oneway_mirror', 
+    'prism' : 'prism', 
+    'transporter' : 'transporter',
+    'hole_square' : 'hole_square',
+    'warp' : 'warp',
     'blank' : 'blank'
     }
 
@@ -67,20 +83,17 @@ def dumb_filter_and_save(input_image, dumb_filter_func, new_filename):
     #dumb_filter_func(input_image).save(new_filename)
     dumb_filter_func(input_image).convert(mode = 'P', palette = Image.ADAPTIVE, dither = Image.NONE).save(new_filename)
 
-def create_piece_bitmaps(in_piece_name, out_piece_name, outfile_type, out_dirname=None):
+def create_piece_bitmaps(infile_pattern, in_piece_name, out_piece_name, outfile_type, out_dirname=None):
     outfile_pattern="%dx%d_%s%d"
     outfile_pattern="%dx%d_%d_%s%d"
     outfile_pattern="%(player_number)d_%(out_piece_name)s%(tile_count)d"
     #outfile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\data\\sharpalc\\%dx%d_%s%d"
     #outfile_pattern="out_"+outfile_pattern
     outfile_pattern=outfile_pattern+outfile_type
-    #infile_pattern="in_%s%d.gif"
-    infile_pattern="%s%d.gif"
-    infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\data\\sharpalc\\%s%d.gif"
-    infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\data\\alc\\%s%d.gif"
     
     in_dir = os.path.dirname(infile_pattern)
     sys.path.append(in_dir)
+    
     try:
         from tile_colours import p1top2_colours, p1tofrozen_colours
     except ImportError, info:
@@ -97,7 +110,13 @@ def create_piece_bitmaps(in_piece_name, out_piece_name, outfile_type, out_dirnam
         
         p1top2_colours = {p1mirror_colour : p2mirror_colour, p1colour : p2colour}
         p1tofrozen_colours = {p1mirror_colour : frozen_colour, p1colour : frozen_colour}
+    try:
+        from tile_colours import orig_to_p1_colours
+    except ImportError, info:
+        print 'no change of colour for p1 pieces'
+        orig_to_p1_colours = {}
     
+    change_colours_p1 = change_colours(orig_to_p1_colours )
     change_colours_p2 = change_colours(p1top2_colours)
     change_colours_gray = change_colours(p1tofrozen_colours)
     
@@ -112,6 +131,7 @@ def create_piece_bitmaps(in_piece_name, out_piece_name, outfile_type, out_dirnam
         out_dirname=out_dirname+"_%(tile_width)dx%(tile_height)d" % locals()
     try:
         os.mkdir(out_dirname)
+        print 'created directory:', out_dirname
     except OSError, info:
         if info.errno==17:
             # already exists
@@ -131,7 +151,8 @@ def create_piece_bitmaps(in_piece_name, out_piece_name, outfile_type, out_dirnam
         out = out.rotate(-90) # degrees clockwise
         # TODO transparent background
         #print outfile
-        out.save(outfile)
+        #out.save(outfile)
+        dumb_filter_and_save(out, change_colours_p1, outfile)
         # TODO change colour...., re-save with new filename prefixed with green
         player_number=2
         outfile=outfile_pattern % locals()
@@ -154,7 +175,8 @@ def create_piece_bitmaps(in_piece_name, out_piece_name, outfile_type, out_dirnam
         outfile=outfile_pattern % locals()
         out = out.rotate(-90) # degrees clockwise
         # TODO transparent background
-        out.save(outfile)
+        #out.save(outfile)
+        dumb_filter_and_save(out, change_colours_p1, outfile)
         # TODO change colour...., re-save with new filename prefixed with green
         player_number=2
         outfile=outfile_pattern % locals()
@@ -162,8 +184,22 @@ def create_piece_bitmaps(in_piece_name, out_piece_name, outfile_type, out_dirnam
         frozen_outfile = outfile_pattern % { 'player_number':9, 'out_piece_name':out_piece_name, 'tile_count':tile_count}
         dumb_filter_and_save(out, change_colours_gray, frozen_outfile)
 
+################
+
+# laserchess.org tileset
+#infile_pattern="in_%s%d.gif"
+infile_pattern="%s%d.gif"
+infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\data\\sharpalc\\%s%d.gif"
+infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\data\\alc\\%s%d.gif"
+alc_mapping = laserchess_org_2alc_name_mapping
+
+
+# amiga tile set
+infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\extracted_pieces_15x15\\1_%s%d.gif"
+alc_mapping = alc_names
+
 #for piece_name in ['stomper', 'laser']:
 for piece_name in alc_mapping:
-    #create_piece_bitmaps(piece_name, alc_mapping[piece_name], outfile_type)
-    create_piece_bitmaps(piece_name, alc_mapping[piece_name], outfile_type, out_dirname='testpieces')
+    #create_piece_bitmaps(infile_pattern, piece_name, alc_mapping[piece_name], outfile_type)
+    create_piece_bitmaps(infile_pattern, piece_name, alc_mapping[piece_name], outfile_type, out_dirname='testpieces')
 

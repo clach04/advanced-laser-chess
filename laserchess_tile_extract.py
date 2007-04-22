@@ -33,10 +33,11 @@ dirty but fast (with small numbers) and saves working out off-sets (tile x*1+...
 #box = (1, 1, 16, 18) # (15,17) image -- top left hand corner image that we want
 startx=1
 starty=1
+## ALC tile dimensions for Original Amiga alc tiles in ILBM/IFF file
 tile_xlen=15 # width
 tile_hlen=17 # height
 #box_without_border = (startx, starty, startx+tile_xlen, starty+tile_hlen)
-box_without_border = (1, 1, 16, 18)
+box_without_border = (1, 2, 16, 17)
 
 
 
@@ -64,6 +65,7 @@ except OSError, info:
         pass
     else:
         raise
+print 'using dir:', out_dirname
 outfile_pattern = os.path.join(out_dirname, outfile_pattern)
 
 
@@ -110,8 +112,8 @@ extract_tiles(5, 0, 1, 'freezer', num_tiles=1, rotation=1)
 extract_tiles(0, 1, 1, 'stomper', num_tiles=1, rotation=0)
 extract_tiles(1, 1, 1, 'stomper', num_tiles=1, rotation=1)
 
-extract_tiles(0, 2, 1, 'way_mirror', num_tiles=1, rotation=0)
-extract_tiles(1, 2, 1, 'way_mirror', num_tiles=1, rotation=1)
+extract_tiles(0, 2, 1, 'oneway_mirror', num_tiles=1, rotation=0)
+extract_tiles(1, 2, 1, 'oneway_mirror', num_tiles=1, rotation=1)
 
 extract_tiles(0, 3, 1, 'mirror', num_tiles=1, rotation=0)
 extract_tiles(1, 3, 1, 'mirror', num_tiles=1, rotation=1)
@@ -143,6 +145,16 @@ extract_tiles(0, 6, 1, 'hole_square', num_tiles=1, rotation=0)
 extract_tiles(0, 6, 1, 'hole_square', num_tiles=1, rotation=1) # coords are not the same as pieces :-(
 #extract_tiles(5, 6, 1, 'hole_square', num_tiles=1, rotation=1)
 
+## blank tile
+#blank_tile = Image.new(mode = 'P', size=(tile_width, tile_height), color)
+blank_tile = Image.new(mode = 'P', size=(tile_width, tile_height)) ## PIL manual says colour defaults to black
+## at some point want transparent?
+piece_name = 'blank'
+outfile=outfile_pattern%(1, piece_name, 0)
+blank_tile.save(outfile)
+outfile=outfile_pattern%(1, piece_name, 1)
+blank_tile.save(outfile)
+
 
 
 #out = im.resize((128, 128))
@@ -151,8 +163,8 @@ extract_tiles(0, 6, 1, 'hole_square', num_tiles=1, rotation=1) # coords are not 
 colour_template = '''
 # EDITME!
 # default colour mapping
-p1colour = (180, 72, 72)
-p1mirror_colour = (255, 180, 180)
+p1colour = (176, 32, 0)
+p1mirror_colour = (240, 48, 0)
 
 p2colour = (72, 180, 72)
 #p2colour = (72, 72, 180)# test blue
@@ -160,9 +172,14 @@ p2mirror_colour = (180, 255, 180)
 
 frozen_colour = (180, 180, 180)
 
+orig_background_colour = (96, 96, 96)
+new_background_colour = (0, 0, 0)
+
+
 # EDITME!
-#p1top2_colours = {p1mirror_colour : p2mirror_colour, p1colour : p2colour}
-#p1tofrozen_colours = {p1mirror_colour : frozen_colour, p1colour : frozen_colour}
+orig_to_p1_colours = {orig_background_colour:new_background_colour}
+p1top2_colours = {p1mirror_colour : p2mirror_colour, p1colour : p2colour, orig_background_colour:new_background_colour}
+p1tofrozen_colours = {p1mirror_colour : frozen_colour, p1colour : frozen_colour, orig_background_colour:new_background_colour}
 
 '''
 

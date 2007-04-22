@@ -16,6 +16,7 @@ def create_piece_bitmaps(in_piece_name):
     infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\data\\sharpalc\\%s%d.gif"
     infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\small_%s%d.gif"
     infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\green_small_%s%d.gif"
+    infile_pattern="F:\\documents\\drive_f_share\\python\\laserchess\\extracted_pieces_15x15\\1_%s%d.gif"
     
     infile=infile_pattern%(in_piece_name, 0)
     im = Image.open(infile)
